@@ -22,7 +22,7 @@ The system is designed around **three practical support-agent decisions**:
 
 | # | Decision | Description |
 |---|----------|-------------|
-| 1 | 🏷️ **Classify** | Understand the customer''s intent |
+| 1 | 🏷️ **Classify** | Understand the customer's intent |
 | 2 | 🔍 **Retrieve** | Find similar historical AppleSupport interactions as evidence |
 | 3 | ⚖️ **Decide** | Auto-handle the case or escalate to a human |
 
@@ -41,19 +41,29 @@ The system is designed around **three practical support-agent decisions**:
 7. [Historical Support Evidence](#7-historical-support-evidence)
 8. [Retrieval System](#8-retrieval-system)
 9. [Support Agent Architecture](#9-support-agent-architecture)
-10. [Baselines](#10-baselines)
-11. [Important Evaluation Correction](#11-important-evaluation-correction)
-12. [Gemini Validation](#12-gemini-validation)
-13. [What Is Misleading About a Headline Number?](#13-what-is-misleading-about-a-headline-number)
-14. [Known Failure Modes](#14-known-failure-modes)
-15. [What Was Not Built](#15-what-was-not-built)
-16. [One More Week — What I Would Build](#16-one-more-week--what-i-would-build)
-17. [Repository Structure](#17-repository-structure)
-18. [Running the Project](#18-running-the-project)
-19. [Reproducibility and Data Handling](#19-reproducibility-and-data-handling)
-20. [Current Results Summary](#20-current-results-summary)
-21. [Key Design Decisions](#21-key-design-decisions)
-22. [Conclusion](#22-conclusion)
+10. [Detailed Technical Architecture](#10-detailed-technical-architecture)
+    - 10.1 [Purpose of This Section](#101-purpose-of-this-section)
+    - 10.2 [High-Level Pipeline](#102-high-level-pipeline)
+    - 10.3 [Component Breakdown](#103-component-breakdown)
+    - 10.4 [Request Lifecycle (Sequence Diagram)](#104-request-lifecycle-sequence-diagram)
+    - 10.5 [Technology Stack](#105-technology-stack)
+    - 10.6 [Design Principles](#106-design-principles)
+    - 10.7 [Known Limitations & Roadmap](#107-known-limitations--roadmap)
+    - 10.8 [Key Files Reference](#108-key-files-reference)
+11. [Baselines](#11-baselines)
+12. [Important Evaluation Correction](#12-important-evaluation-correction)
+13. [Gemini Validation](#13-gemini-validation)
+14. [What Is Misleading About a Headline Number?](#14-what-is-misleading-about-a-headline-number)
+15. [Known Failure Modes](#15-known-failure-modes)
+16. [What Was Not Built](#16-what-was-not-built)
+17. [One More Week — What I Would Build](#17-one-more-week--what-i-would-build)
+18. [Repository Structure](#18-repository-structure)
+19. [Running the Project](#19-running-the-project)
+20. [Reproducibility and Data Handling](#20-reproducibility-and-data-handling)
+21. [Current Results Summary](#21-current-results-summary)
+22. [Key Design Decisions](#22-key-design-decisions)
+23. [Hiver Requirements — Current Status](#23-hiver-requirements--current-status)
+24. [Conclusion](#24-conclusion)
 
 ---
 
@@ -64,7 +74,7 @@ Customer-support teams receive a large volume of **short, noisy, and sometimes i
 A useful support agent should not only generate a reply. It should:
 
 - 🧠 First **understand** what the customer needs
-- 📚 Use the brand''s own **historical support behavior** as evidence
+- 📚 Use the brand's own **historical support behavior** as evidence
 - 🛑 Know **when to stop** and involve a human
 
 > For this prototype, the selected brand is **AppleSupport**.
@@ -93,7 +103,7 @@ Auto-Handle  ──or──  Escalate to Human
 
 A good system should:
 
-- ✅ Identify the customer''s **primary support intent**
+- ✅ Identify the customer's **primary support intent**
 - ✅ Avoid confusing a **root cause** with a symptom
 - ✅ Use **real historical AppleSupport interactions** as evidence
 - ✅ Avoid inventing **Apple policies, refunds, warranties, or guarantees**
@@ -351,6 +361,8 @@ The corresponding AppleSupport replies are supplied as **evidence** to the respo
        Grounded Reply           Human / DM Follow-up
 ```
 
+> 📎 For a component-by-component breakdown, a request-lifecycle sequence diagram, and the full technology stack, see **[§10 — Detailed Technical Architecture](#10-detailed-technical-architecture)** below.
+
 ### Intent Classification
 
 The prototype uses **Gemini** for intent classification so that the 200 golden labels remain **evaluation-only** rather than training labels.
@@ -394,7 +406,164 @@ IOS_UPDATE_ISSUE
 
 ---
 
-## 10. Baselines
+## 10. Detailed Technical Architecture
+
+> *This section describes how the pipeline above is implemented mechanically — component responsibilities, the request lifecycle, and technology choices.*
+
+### 10.1 Purpose of This Section
+
+The overview in §9 explains **what** the agent does and **why** each decision was made. This section explains **how the pieces fit together mechanically** — the pipeline shape, the responsibilities of each module, and the data that flows between them. It's meant for anyone extending the codebase.
+
+### 10.2 High-Level Pipeline
+
+```mermaid
+flowchart TD
+    A[📩 Customer Message] --> B[🏷️ Intent Classification<br/>Gemini API]
+    B --> C[🔍 Historical Retrieval<br/>TF-IDF + Cosine Similarity]
+    C --> D{⚖️ Escalation Policy Engine}
+    D -->|High-risk intent<br/>or weak evidence| E[🙋 Escalate to Human]
+    D -->|Low-risk intent<br/>+ strong evidence| F[✍️ Grounded Reply Generation<br/>Gemini API]
+    F --> G[🧹 Output Sanitization]
+    G --> H[✅ Final Response]
+    E --> H
+```
+
+The pipeline is intentionally linear and inspectable — every message passes through the same four gates (classify → retrieve → decide → respond), so a failure can always be traced back to a single stage.
+
+### 10.3 Component Breakdown
+
+Each component below follows the same template: what it's responsible for, what it consumes and produces, and what happens when it fails.
+
+#### A. Intent Classifier
+
+| | |
+|---|---|
+| **Responsibility** | Identify the customer's primary (root-cause) intent from the 11-label taxonomy |
+| **Input** | Raw customer message text |
+| **Output** | `{intent, confidence}` |
+| **Implementation** | Gemini API call with the taxonomy embedded in the system prompt |
+| **Failure mode** | Low-confidence or malformed output → falls through to `UNKNOWN_ESCALATE` |
+
+#### B. Historical Retriever
+
+| | |
+|---|---|
+| **Responsibility** | Surface real historical AppleSupport exchanges relevant to the current message |
+| **Input** | Customer message text |
+| **Output** | Top-*k* `(customer_text, support_reply)` pairs, ranked by cosine similarity |
+| **Implementation** | `TfidfVectorizer` (unigrams + bigrams, English stop words) over 62,686 historical pairs |
+| **Failure mode** | No result above similarity threshold → evidence is marked "weak," which biases the policy engine toward escalation |
+
+#### C. Escalation Policy Engine
+
+| | |
+|---|---|
+| **Responsibility** | Decide whether the case can be safely auto-handled |
+| **Input** | Predicted intent, classifier confidence, retrieval strength |
+| **Output** | `AUTO_HANDLE` or `ESCALATE` + a human-readable reason |
+| **Implementation** | Static risk table (see §9 above) combined with confidence/evidence thresholds |
+| **Failure mode** | Ambiguous signal → defaults to `ESCALATE` (conservative by design, never fails open) |
+
+#### D. Grounded Reply Generator
+
+| | |
+|---|---|
+| **Responsibility** | Draft a new, natural-language reply — not a copy of a historical one |
+| **Input** | Customer message, predicted intent, retrieved evidence |
+| **Output** | Draft support reply |
+| **Implementation** | Gemini API call, prompted to synthesize rather than quote |
+| **Failure mode** | API quota/error → case is escalated rather than returning an empty or fabricated reply |
+
+#### E. Output Sanitizer
+
+| | |
+|---|---|
+| **Responsibility** | Strip artifacts inherited from historical data (old handles, dead links, boilerplate sign-offs) |
+| **Input** | Raw generated reply |
+| **Output** | Clean, user-facing text |
+| **Implementation** | Lightweight post-processing rules applied before display |
+| **Failure mode** | Unrecognized artifact pattern → passes through unchanged (non-blocking) |
+
+### 10.4 Request Lifecycle (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Streamlit UI (app.py)
+    participant AG as Agent (agent.py)
+    participant G as Gemini API
+    participant R as TF-IDF Retriever
+    participant D as Historical Support Pairs
+
+    Note over R,D: Load/index historical pairs at startup
+
+    U->>S: Submit support message
+    S->>AG: Forward message
+
+    AG->>G: Request intent classification
+    G-->>AG: Predicted intent + confidence
+
+    AG->>R: Query with customer message
+    R->>D: Search historical pairs
+    D-->>R: Similar customer-query / reply pairs
+    R-->>AG: Top-k cases + historical support replies
+
+    AG->>AG: Apply escalation policy
+
+    alt Auto-handle
+        AG->>G: Generate grounded reply using intent + evidence
+        G-->>AG: Generated reply
+        AG->>AG: Sanitize output
+    else Escalate
+        AG->>AG: Create escalation reason
+    end
+
+    AG-->>S: Reply + decision + evidence
+    S-->>U: Display final response
+```
+
+### 10.5 Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Frontend** | Streamlit | Interactive chat UI for exercising the agent end-to-end |
+| **LLM Engine** | Google Gemini API | Intent classification + grounded reply generation |
+| **Retrieval** | scikit-learn (TF-IDF) | Fast lexical search over historical support pairs |
+| **Data Handling** | Pandas | Loading, filtering, and splitting the Twitter dataset |
+| **Evaluation** | Macro F1 / Accuracy | Class-imbalance-aware scoring against the golden set |
+
+### 10.6 Design Principles
+
+These carry over from §2 and §9 but describe *how the architecture enforces them*, not just why they were chosen:
+
+- **Grounding over fluency** — the reply generator never runs without retrieved evidence attached to its prompt.
+- **Escalate on ambiguity, not just on error** — the policy engine treats "unclear" the same as "unsafe."
+- **Evaluation-only golden set** — the golden set never touches the retrieval corpus or classifier training, enforced by explicit ID-overlap checks at data-load time.
+- **Fail closed, not open** — every component's failure mode routes toward escalation or a visible limitation, never toward a silently fabricated answer.
+
+### 10.7 Known Limitations & Roadmap
+
+| Current Limitation | Architectural Cause | Planned Improvement |
+|---|---|---|
+| Misses context-dependent replies ("Thanks!", "That worked.") | Classifier only sees the current tweet | Feed in the previous 2–5 conversation turns |
+| Retrieval is purely lexical | TF-IDF has no semantic understanding | Hybrid retrieval: TF-IDF/BM25 + dense embeddings |
+| Retrieves single message–reply pairs | Historical corpus is pair-level, not thread-level | Thread-level retrieval for fuller resolution context |
+| Fixed escalation thresholds | Thresholds set heuristically, not tuned | Calibrate against a human-reviewed decision set |
+| No production vector store | Prototype scope | Swap TF-IDF index for a vector database at scale |
+
+### 10.8 Key Files Reference
+
+| File | Role |
+|------|------|
+| `app.py` | Streamlit entry point; wires the UI to the agent |
+| `src/agent.py` | Core orchestration: classification, retrieval, policy, generation |
+| `data/processed/historical_support_pairs_dev.csv` | Retrieval corpus (62,686 pairs) |
+| `data/processed/golden_set_200_reviewed.csv` | Evaluation-only ground truth (200 examples) |
+| `notebooks/Hiver_Evaluation.ipynb` | Reproducible end-to-end evaluation run |
+
+---
+
+## 11. Baselines
 
 Two lightweight baselines were established.
 
@@ -421,7 +590,7 @@ A deterministic keyword/rule classifier was implemented using the 11-intent taxo
 
 ---
 
-## 11. Important Evaluation Correction
+## 12. Important Evaluation Correction
 
 > [!WARNING]
 > An earlier TF-IDF experiment trained and evaluated on the **same golden examples**, producing a misleading result.
@@ -444,7 +613,7 @@ A deterministic keyword/rule classifier was implemented using the 11-intent taxo
 
 ---
 
-## 12. Gemini Validation
+## 13. Gemini Validation
 
 The Gemini agent was validated end-to-end on representative examples.
 
@@ -465,12 +634,12 @@ The system also retrieved similar historical AppleSupport interactions and gener
 > A full 200-example Gemini generation evaluation was attempted. The API returned `429 RESOURCE_EXHAUSTED` because the available API quota was exhausted.
 
 This project **does not claim** a fake full-200 Gemini accuracy from fallback outputs. This limitation is **recorded explicitly** rather than hidden.
-<img width="1118" height="478" alt="image" src="https://github.com/user-attachments/assets/d885c694-9232-435c-bd8d-19a24f3351b3" />
 
+<img width="1118" height="478" alt="Gemini validation example output" src="https://github.com/user-attachments/assets/d885c694-9232-435c-bd8d-19a24f3351b3" />
 
 ---
 
-## 13. What Is Misleading About a Headline Number?
+## 14. What Is Misleading About a Headline Number?
 
 Intent accuracy alone is **not equivalent** to successful customer-support resolution.
 
@@ -498,7 +667,7 @@ Escalation Behavior
 
 ---
 
-## 14. Known Failure Modes
+## 15. Known Failure Modes
 
 ### Failure 1 — Update Cause vs. Performance Symptom
 
@@ -561,7 +730,7 @@ Many AppleSupport replies are short:
 
 ```
 "Please DM us."
-"Let''s look into this."
+"Let's look into this."
 "Send us a DM."
 ```
 
@@ -573,13 +742,13 @@ These are useful for escalation behavior but contain **limited troubleshooting d
 
 ---
 
-## 15. What Was Not Built
+## 16. What Was Not Built
 
 > [!NOTE]
 > This prototype intentionally does **not** attempt to build:
 
 | Out of Scope | Reason |
-|-------------|--------|
+|---------------|--------|
 | Production authentication | Prototype scope |
 | Real customer-account access | Prototype scope |
 | Real ticketing-system integration | Prototype scope |
@@ -587,13 +756,13 @@ These are useful for escalation behavior but contain **limited troubleshooting d
 | Payment / refund processing | Prototype scope |
 | Production-scale vector database | Prototype scope |
 | Real-time Twitter / X integration | Prototype scope |
-|Fully autonomous issue resolution | Prototype scope |
+| Fully autonomous issue resolution | Prototype scope |
 
 > This is a **research / prototype** support-agent system for the Hiver take-home assignment.
 
 ---
 
-## 16. One More Week — What I Would Build
+## 17. One More Week — What I Would Build
 
 With one additional week, I would prioritize:
 
@@ -643,47 +812,50 @@ Use a calibrated LLM judge plus human spot-checking for:
 
 ---
 
-## 17. Repository Structure
+## 18. Repository Structure
 
 ```text
 hiver-ai-support-agent/
 │
-├── data/                                 # Datasets
-│   ├── raw/                              # Original Kaggle dataset (500MB, ignored by git)
+├── data/                                     # Datasets
+│   ├── raw/                                  # Original Kaggle dataset (500MB, ignored by git)
 │   │   └── customer_support_on_twitter.csv
-│   └── processed/                        # Cleaned and split datasets
-│       ├── apple_support.csv             # Filtered AppleSupport tweets
-│       ├── development_set.csv           # 78k training/dev examples
-│       ├── test_set.csv                  # 19k testing examples
-│       ├── golden_set_200_reviewed.csv   # 200 human-verified evaluation examples
-│       └── historical_support_pairs_dev.csv # 62k historical customer-support pairs
+│   └── processed/                            # Cleaned and split datasets
+│       ├── apple_support.csv                 # Filtered AppleSupport tweets
+│       ├── development_set.csv               # 78k training/dev examples
+│       ├── test_set.csv                      # 19k testing examples
+│       ├── golden_set_200_reviewed.csv       # 200 human-verified evaluation examples
+│       └── historical_support_pairs_dev.csv  # 62k historical customer-support pairs
 │
-├── notebooks/                            # Jupyter Notebooks for analysis
-│   ├── 01_data_exploration.ipynb         # Initial EDA and API tests
-│   ├── AppleSupport_Dev_Test_Split.ipynb # Data splitting and pipeline logic
-│   └── Hiver_Evaluation.ipynb            # Core model evaluations and LLM metrics
+├── notebooks/                                # Jupyter Notebooks for analysis
+│   ├── 01_data_exploration.ipynb             # Initial EDA and API tests
+│   ├── AppleSupport_Dev_Test_Split.ipynb     # Data splitting and pipeline logic
+│   └── Hiver_Evaluation.ipynb                # Core model evaluations and LLM metrics
 │
-├── results/                              # Output results from evaluation runs
-│   ├── baseline_rule_predictions.csv     # Rule-based baseline evaluation outputs
-│   ├── golden_predictions.csv            # Final golden set evaluation results
-│   ├── failure_analysis.csv              # Detailed breakdown of misclassifications
-│   └── top5_failure_modes.csv            # Summary of the top 5 model failure modes
+├── results/                                  # Output results from evaluation runs
+│   ├── baseline_rule_predictions.csv         # Rule-based baseline evaluation outputs
+│   ├── golden_predictions.csv                # Final golden set evaluation results
+│   ├── failure_analysis.csv                  # Detailed breakdown of misclassifications
+│   └── top5_failure_modes.csv                # Summary of the top 5 model failure modes
 │
-├── reports/                              # Detailed markdown reports
+├── reports/                                  # Detailed markdown reports
 │   └── evaluation_report.md
 │
-├── src/                                  # Core Python modules
-│   └── agent.py                          # Main Gemini agent logic, classification & retrieval
+├── src/                                      # Core Python modules
+│   └── agent.py                              # Main Gemini agent logic, classification & retrieval
 │
-├── app.py                                # Streamlit Web UI application
-├── requirements.txt                      # Project Python dependencies
-├── .gitignore                            # Git ignore configuration
-└── README.md                             # Project documentation
+├── .streamlit/
+│   └── secrets.toml                          # Local-only Gemini API key (never committed)
+│
+├── app.py                                    # Streamlit Web UI application
+├── requirements.txt                          # Project Python dependencies
+├── .gitignore                                # Git ignore configuration
+└── README.md                                 # Project documentation (this file)
 ```
 
 ---
 
-## 18. Running the Project
+## 19. Running the Project
 
 ### Streamlit Web App
 
@@ -726,20 +898,26 @@ The reproducible local components include:
 
 The generative component requires a **Gemini API key**.
 
-For Colab, store the key as a Secret:
+**For Colab**, store the key as a Secret named:
 
 ```
 GOOGLE_API_KEY
 ```
 
+**For local Streamlit**, create `.streamlit/secrets.toml` (already excluded via `.gitignore`):
+
+```toml
+GOOGLE_API_KEY = "your-key-here"
+```
+
 > [!CAUTION]
-> **Do not** hard-code the API key into source code or commit it to GitHub.
+> **Do not** hard-code the API key into source code or commit it to GitHub — use environment variables, Colab Secrets, or `.streamlit/secrets.toml` only.
 
 > The full generative evaluation is optional when API quota is unavailable.
 
 ---
 
-## 19. Reproducibility and Data Handling
+## 20. Reproducibility and Data Handling
 
 > [!IMPORTANT]
 > Important reproducibility rules:
@@ -755,7 +933,7 @@ GOOGLE_API_KEY
 
 ---
 
-## 20. Current Results Summary
+## 21. Current Results Summary
 
 | Component | Result |
 |-----------|--------|
@@ -774,7 +952,7 @@ GOOGLE_API_KEY
 
 ---
 
-## 21. Key Design Decisions
+## 22. Key Design Decisions
 
 | # | Decision | Rationale |
 |---|----------|-----------|
@@ -788,7 +966,36 @@ GOOGLE_API_KEY
 
 ---
 
-## 22. Conclusion
+## 23. Hiver Requirements — Current Status
+
+| Hiver Requirement | Status | Details |
+|---|---|---|
+| Pick one brand | ✅ Complete | Apple Support |
+| Intent taxonomy defined from data | ✅ Complete | 11 intents |
+| AI intent classification | ✅ Complete | Gemini |
+| Reply grounded in historical brand responses | ✅ Complete | Retrieval + Gemini |
+| Auto-handle vs. escalate + reason | ✅ Complete | Implemented |
+| Runnable repository | 🟡 Mostly complete | Final setup and execution testing needed |
+| 150–250 hand-labelled golden examples | ✅ Complete | 200 examples |
+| Sampling / labeling note | ✅ Complete | Documented |
+| Trivial baseline | ✅ Complete | Majority-class baseline: 28% |
+| Simple baseline | ✅ Complete | Rule-based accuracy: 38%; Macro F1: 0.4053 |
+| Automated metrics | 🟡 Partly complete | Additional evaluation metrics may be needed |
+| LLM-as-judge for reply quality | ✅ Complete | Implemented |
+| Evidence of LLM-judge vs. human agreement | ✅ Complete | Agreement analysis completed |
+| Top 5 failure modes with examples + hypotheses | ✅ Complete | Documented |
+| "What is misleading about my headline number?" | ✅ Complete | Analysis included |
+| What to do with one more week | ✅ Complete | Next steps documented |
+| Decision log: 10–15 decisions | ✅ Complete | Documented |
+| README | 🟡 Drafted | Final review and cleanup needed |
+| Clean setup / reproducibility under 15 minutes | ✅ Done | Verify on a clean environment |
+| No leaked evaluation numbers | ✅ Complete | Identified and removed the 99.5% leakage |
+
+> Repository layout matches [§18 Repository Structure](#18-repository-structure) above — see that section for the authoritative folder tree.
+
+---
+
+## 24. Conclusion
 
 This project demonstrates a support-agent architecture that combines:
 
@@ -805,69 +1012,6 @@ Explicit Evaluation
 ```
 
 <div align="center">
----
-## Hiver Requirements — Current Status
-
-| Hiver Requirement                              | Current Status      | Details                                     |
-| ---------------------------------------------- | ------------------- | ------------------------------------------- |
-| Pick one brand                                 | ✅ Complete          | Apple Support                               |
-| Intent taxonomy defined from data              | ✅ Complete          | 11 intents                                  |
-| AI intent classification                       | ✅ Complete          | Gemini                                      |
-| Reply grounded in historical brand responses   | ✅ Complete          | Retrieval + Gemini                          |
-| Auto-handle vs. escalate + reason              | ✅ Complete          | Implemented                                 |
-| Runnable repository                            |     Mostly complete  | Final setup and execution testing needed    |
-| 150–250 hand-labelled golden examples          | ✅ Complete          | 200 examples                                |
-| Sampling / labeling note                       | ✅ Complete          | Documented                                  |
-| Trivial baseline                               | ✅ Complete          | Majority-class baseline: 28%                |
-| Simple baseline                                | ✅ Complete          | Rule-based accuracy: 38%; Macro F1: 0.4053  |
-| Automated metrics                              |      Partly complete  | Additional evaluation metrics may be needed |
-| LLM-as-judge for reply quality                 | ✅ Complete          | Implemented                                 |
-| Evidence of LLM-judge vs. human agreement      | ✅ Complete          | Agreement analysis completed                |
-| Top 5 failure modes with examples + hypotheses | ✅ Complete          | Documented                                  |
-| “What is misleading about my headline number?” | ✅ Complete          | Analysis included                           |
-| What to do with one more week                  | ✅ Complete          | Next steps documented                       |
-| Decision log: 10–15 decisions                  | ✅ Complete          | Documented                                  |
-| README                                         |     Drafted          | Final review and cleanup needed             |
-| Clean setup / reproducibility under 15 minutes |    done              | Verify on a clean environment               |
-| No leaked evaluation numbers                   | ✅ Complete          | Identified and removed the 99.5% leakage    |
-
-### Overall folder Status
-
-hiver-ai-support-agent/
-│
-| streamlit - secrets.toml GOOGLE_API_KEY = " "
-
-├── data/                                 # Datasets
-│   ├── raw/                              # Original Kaggle dataset (500MB, ignored by git)
-│   │   └── customer_support_on_twitter.csv
-│   └── processed/                        # Cleaned and split datasets
-│       ├── apple_support.csv             # Filtered AppleSupport tweets
-│       ├── development_set.csv           # 78k training/dev examples
-│       ├── test_set.csv                  # 19k testing examples
-│       ├── golden_set_200_reviewed.csv   # 200 human-verified evaluation examples
-│       └── historical_support_pairs_dev.csv # 62k historical customer-support pairs
-│
-├── notebooks/                            # Jupyter Notebooks for analysis
-│   ├── 01_data_exploration.ipynb         # Initial EDA and API tests
-│   ├── AppleSupport_Dev_Test_Split.ipynb # Data splitting and pipeline logic
-│   └── Hiver_Evaluation.ipynb            # Core model evaluations and LLM metrics
-│
-├── results/                              # Output results from evaluation runs
-│   ├── baseline_rule_predictions.csv     # Rule-based baseline evaluation outputs
-│   ├── golden_predictions.csv            # Final golden set evaluation results
-│   ├── failure_analysis.csv              # Detailed breakdown of misclassifications
-│   └── top5_failure_modes.csv            # Summary of the top 5 model failure modes
-│
-├── reports/                              # Detailed markdown reports
-│   └── evaluation_report.md              
-│
-├── src/                                  # Core Python modules
-│   └── agent.py                          # Main  agent logic, classification & retrieval
-│
-├── app.py                                # Streamlit Web UI application
-├── requirements.txt                      # Project Python dependencies
-├── .gitignore                            # Git ignore configuration
-└── README.md                             # Project documentation
 
 ### 💡 Core Design Principle
 
