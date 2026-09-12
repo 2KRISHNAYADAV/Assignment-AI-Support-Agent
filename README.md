@@ -829,10 +829,43 @@ Explicit Evaluation
 | Clean setup / reproducibility under 15 minutes |    done              | Verify on a clean environment               |
 | No leaked evaluation numbers                   | ✅ Complete          | Identified and removed the 99.5% leakage    |
 
-### Overall Status
+### Overall folder Status
 
-**Most of the core requirements are complete.** The main remaining work is to finalize the README, verify clean setup and reproducibility, and complete any missing automated evaluation metrics.
+hiver-ai-support-agent/
+│
+| streamlit - secrets.toml GOOGLE_API_KEY = " "
 
+├── data/                                 # Datasets
+│   ├── raw/                              # Original Kaggle dataset (500MB, ignored by git)
+│   │   └── customer_support_on_twitter.csv
+│   └── processed/                        # Cleaned and split datasets
+│       ├── apple_support.csv             # Filtered AppleSupport tweets
+│       ├── development_set.csv           # 78k training/dev examples
+│       ├── test_set.csv                  # 19k testing examples
+│       ├── golden_set_200_reviewed.csv   # 200 human-verified evaluation examples
+│       └── historical_support_pairs_dev.csv # 62k historical customer-support pairs
+│
+├── notebooks/                            # Jupyter Notebooks for analysis
+│   ├── 01_data_exploration.ipynb         # Initial EDA and API tests
+│   ├── AppleSupport_Dev_Test_Split.ipynb # Data splitting and pipeline logic
+│   └── Hiver_Evaluation.ipynb            # Core model evaluations and LLM metrics
+│
+├── results/                              # Output results from evaluation runs
+│   ├── baseline_rule_predictions.csv     # Rule-based baseline evaluation outputs
+│   ├── golden_predictions.csv            # Final golden set evaluation results
+│   ├── failure_analysis.csv              # Detailed breakdown of misclassifications
+│   └── top5_failure_modes.csv            # Summary of the top 5 model failure modes
+│
+├── reports/                              # Detailed markdown reports
+│   └── evaluation_report.md              
+│
+├── src/                                  # Core Python modules
+│   └── agent.py                          # Main  agent logic, classification & retrieval
+│
+├── app.py                                # Streamlit Web UI application
+├── requirements.txt                      # Project Python dependencies
+├── .gitignore                            # Git ignore configuration
+└── README.md                             # Project documentation
 
 ### 💡 Core Design Principle
 
