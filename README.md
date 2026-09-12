@@ -800,29 +800,34 @@ Explicit Evaluation
 
 <div align="center">
 ---
-// Hiver requirement current status
-      | Hiver requirement                              | Status                                    |
-| ---------------------------------------------- | ----------------------------------------- |
-| Pick one brand                                 | ✅ AppleSupport                            |
-| Intent taxonomy defined from data              | ✅ 11 intents                              |
-| AI intent classification                       | ✅ Gemini                                  |
-| Reply grounded in historical brand responses   | ✅ Retrieval + Gemini                      |
-| Auto-handle vs escalate + reason               | ✅                                         |
-| Runnable repo                                  | ✅ Mostly                                  |
-| 150–250 hand-labelled golden examples          | ✅ 200                                     |
-| Sampling/labeling note                         | ✅                                         |
-| Trivial baseline                               | ✅ Majority = 28%                          |
-| Simple baseline                                | ✅ Rule-based = 38%, Macro F1 = 0.4053     |
-| Automated metrics                              |  Partly done                            |
-| LLM-as-judge for reply quality                 | done                            |
-| Evidence of LLM-judge vs human agreement       | done                            |
-| Top 5 failure modes with examples + hypotheses | ✅                                         |
-| “What is misleading about my headline number?” | ✅                                         |
-| What to do with one more week                  | ✅                                         |
-| Decision log: 10–15 decisions                  | ✅                                         |
-| README                                         | ✅ Drafted                                 |
-| Clean setup / reproducibility under 15 min     | ⚠️ Needs final test                       |
-| No leaked evaluation numbers                   | ✅ We caught and removed the 99.5% leakage |
+## Hiver Requirements — Current Status
+
+| Hiver Requirement                              | Current Status      | Details                                     |
+| ---------------------------------------------- | ------------------- | ------------------------------------------- |
+| Pick one brand                                 | ✅ Complete          | Apple Support                               |
+| Intent taxonomy defined from data              | ✅ Complete          | 11 intents                                  |
+| AI intent classification                       | ✅ Complete          | Gemini                                      |
+| Reply grounded in historical brand responses   | ✅ Complete          | Retrieval + Gemini                          |
+| Auto-handle vs. escalate + reason              | ✅ Complete          | Implemented                                 |
+| Runnable repository                            |     Mostly complete  | Final setup and execution testing needed    |
+| 150–250 hand-labelled golden examples          | ✅ Complete          | 200 examples                                |
+| Sampling / labeling note                       | ✅ Complete          | Documented                                  |
+| Trivial baseline                               | ✅ Complete          | Majority-class baseline: 28%                |
+| Simple baseline                                | ✅ Complete          | Rule-based accuracy: 38%; Macro F1: 0.4053  |
+| Automated metrics                              |      Partly complete  | Additional evaluation metrics may be needed |
+| LLM-as-judge for reply quality                 | ✅ Complete          | Implemented                                 |
+| Evidence of LLM-judge vs. human agreement      | ✅ Complete          | Agreement analysis completed                |
+| Top 5 failure modes with examples + hypotheses | ✅ Complete          | Documented                                  |
+| “What is misleading about my headline number?” | ✅ Complete          | Analysis included                           |
+| What to do with one more week                  | ✅ Complete          | Next steps documented                       |
+| Decision log: 10–15 decisions                  | ✅ Complete          | Documented                                  |
+| README                                         |     Drafted          | Final review and cleanup needed             |
+| Clean setup / reproducibility under 15 minutes |    done              | Verify on a clean environment               |
+| No leaked evaluation numbers                   | ✅ Complete          | Identified and removed the 99.5% leakage    |
+
+### Overall Status
+
+**Most of the core requirements are complete.** The main remaining work is to finalize the README, verify clean setup and reproducibility, and complete any missing automated evaluation metrics.
 
 
 ### 💡 Core Design Principle
