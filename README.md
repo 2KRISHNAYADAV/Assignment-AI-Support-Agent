@@ -465,6 +465,7 @@ The system also retrieved similar historical AppleSupport interactions and gener
 > A full 200-example Gemini generation evaluation was attempted. The API returned `429 RESOURCE_EXHAUSTED` because the available API quota was exhausted.
 
 This project **does not claim** a fake full-200 Gemini accuracy from fallback outputs. This limitation is **recorded explicitly** rather than hidden.
+<img width="775" height="267" alt="image" src="https://github.com/user-attachments/assets/ef5c0c36-a18e-4fed-8da6-42b1a897548e" />
 
 ---
 
