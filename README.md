@@ -581,11 +581,11 @@ These are useful for escalation behavior but contain **limited troubleshooting d
 | Production authentication | Prototype scope |
 | Real customer-account access | Prototype scope |
 | Real ticketing-system integration | Prototype scope |
-| Real Apple internal knowledge | Prototype scope |
+| Access to proprietary Apple internal knowledge | Prototype scope |
 | Payment / refund processing | Prototype scope |
 | Production-scale vector database | Prototype scope |
 | Real-time Twitter / X integration | Prototype scope |
-| Guaranteed autonomous issue resolution | Prototype scope |
+|Fully autonomous issue resolution | Prototype scope |
 
 > This is a **research / prototype** support-agent system for the Hiver take-home assignment.
 
@@ -799,6 +799,31 @@ Explicit Evaluation
 ```
 
 <div align="center">
+---
+// Hiver requirement current status
+      | Hiver requirement                              | Status                                    |
+| ---------------------------------------------- | ----------------------------------------- |
+| Pick one brand                                 | ✅ AppleSupport                            |
+| Intent taxonomy defined from data              | ✅ 11 intents                              |
+| AI intent classification                       | ✅ Gemini                                  |
+| Reply grounded in historical brand responses   | ✅ Retrieval + Gemini                      |
+| Auto-handle vs escalate + reason               | ✅                                         |
+| Runnable repo                                  | ✅ Mostly                                  |
+| 150–250 hand-labelled golden examples          | ✅ 200                                     |
+| Sampling/labeling note                         | ✅                                         |
+| Trivial baseline                               | ✅ Majority = 28%                          |
+| Simple baseline                                | ✅ Rule-based = 38%, Macro F1 = 0.4053     |
+| Automated metrics                              | ⚠️ Partly done                            |
+| LLM-as-judge for reply quality                 | ❌ Not finished                            |
+| Evidence of LLM-judge vs human agreement       | ❌ Not finished                            |
+| Top 5 failure modes with examples + hypotheses | ✅                                         |
+| “What is misleading about my headline number?” | ✅                                         |
+| What to do with one more week                  | ✅                                         |
+| Decision log: 10–15 decisions                  | ✅                                         |
+| README                                         | ✅ Drafted                                 |
+| Clean setup / reproducibility under 15 min     | ⚠️ Needs final test                       |
+| No leaked evaluation numbers                   | ✅ We caught and removed the 99.5% leakage |
+| Submission form                                | ❌ Still needs to be submitted             |
 
 ### 💡 Core Design Principle
 
