@@ -1,0 +1,6 @@
+failure_mode,expected,predicted,count,hypothesis,next_improvement
+Context-dependent messages classified as unknown,CONTEXT_REQUIRED,UNKNOWN_ESCALATE,25,Keyword rules cannot understand that short or reactive messages depend on previous conversation context.,Use conversation history and a context-aware classifier.
+Feature problems classified as unknown,FEATURE_SETTINGS,UNKNOWN_ESCALATE,24,Customers describe UI and feature problems using varied language that is not covered by fixed keywords.,Use semantic retrieval or an LLM-based intent classifier.
+Update problem classified as battery issue,IOS_UPDATE_ISSUE,BATTERY_CHARGING,9,The rule system reacts to the word 'battery' even when the customer identifies the software update as the root cause.,Prioritize explicit causal language such as 'since the update' over symptom keywords.
+Context message classified as update issue,CONTEXT_REQUIRED,IOS_UPDATE_ISSUE,9,Mentioning an iOS version is mistaken for an update problem even when the actual issue is missing from the current message.,Detect whether the message contains a concrete problem before assigning an update intent.
+Account problem classified as unknown,ACCOUNT_LOGIN,UNKNOWN_ESCALATE,5,Account issues are sometimes expressed indirectly or in languages/phrasing not covered by the keyword rules.,Use multilingual semantic intent classification.
