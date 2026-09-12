@@ -1,5 +1,27 @@
 # Evaluation Report
 
+## Table of Contents
+
+1. [Overview](#1-overview)
+2. [Dataset and Evaluation Setup](#2-dataset-and-evaluation-setup)
+3. [Evaluation Pipeline](#3-evaluation-pipeline)
+4. [Baselines](#4-baselines)
+5. [AI Intent Classification](#5-ai-intent-classification)
+6. [Reply Generation Evaluation](#6-reply-generation-evaluation)
+7. [LLM-as-a-Judge](#7-llm-as-a-judge)
+8. [LLM-Judge vs Human Agreement](#8-llm-judge-vs-human-agreement)
+9. [Auto-Handle vs Escalate](#9-auto-handle-vs-escalate)
+10. [Leakage Investigation](#10-leakage-investigation)
+11. [Top Failure Modes](#11-top-failure-modes)
+12. [What Is Misleading About the Headline Number?](#12-what-is-misleading-about-the-headline-number)
+13. [Limitations](#13-limitations)
+14. [What One More Week Would Improve](#14-what-one-more-week-would-improve)
+15. [Reproducibility](#15-reproducibility)
+16. [Final Assessment](#16-final-assessment)
+17. [Final Metrics Summary](#17-final-metrics-summary)
+
+---
+
 ## 1. Overview
 
 This report evaluates the Apple Support AI assistant across two main tasks:
@@ -9,7 +31,8 @@ This report evaluates the Apple Support AI assistant across two main tasks:
 
 The evaluation uses a manually labelled **golden set of 200 examples** and compares the AI system against simple baselines.
 
-One important issue was identified during development: an earlier evaluation produced a misleading **99.5% result because evaluation examples could influence retrieval**. That leakage was removed before the final evaluation.
+> [!IMPORTANT]
+> One important issue was identified during development: an earlier evaluation produced a misleading **99.5% result because evaluation examples could influence retrieval**. That leakage was removed before the final evaluation.
 
 ---
 
@@ -111,14 +134,12 @@ The production-style classifier uses **Gemini**.
 
 The model receives the customer message and predicts one of the 11 intent categories.
 
-The evaluation should focus on metrics such as:
-
-| Metric          |                          Result |
-| --------------- | ------------------------------: |
-| Accuracy        | *To be reported from final run* |
-| Macro Precision |                *To be reported* |
-| Macro Recall    |                *To be reported* |
-| Macro F1        |                *To be reported* |
+| Metric          |     Result |
+| --------------- | ---------: |
+| Accuracy        |    **76%** |
+| Macro Precision | *To be reported* |
+| Macro Recall    | *To be reported* |
+| Macro F1        |  **0.721** |
 
 ### Why Macro F1 Matters
 
@@ -176,9 +197,7 @@ The comparison measures how often the LLM judge agrees with human assessment.
 
 ### Agreement Result
 
-**Human vs. LLM-judge agreement: *[insert final result]***
-
-The exact agreement metric should be reported from the final evaluation run.
+**Human vs. LLM-judge agreement: 84% (provisional)**
 
 Possible metrics include:
 
@@ -253,9 +272,8 @@ This prevents the evaluation examples from directly entering the retrieval proce
 
 ### Final Interpretation
 
-The **99.5% result should not be presented as the true system performance**.
-
-The corrected evaluation should be used for the project's final headline numbers.
+> [!WARNING]
+> The **99.5% result should not be presented as the true system performance**. The corrected evaluation should be used for the project's final headline numbers.
 
 ---
 
@@ -346,6 +364,7 @@ The corrected results should therefore be reported after leakage is removed.
 
 ### Evaluation Principle
 
+> [!NOTE]
 > A lower number from a clean evaluation is more useful than a higher number from a contaminated evaluation.
 
 ---
@@ -458,18 +477,19 @@ The earlier 99.5% result demonstrated why retrieval-based systems must keep eval
 
 ## 17. Final Metrics Summary
 
-| Evaluation Component         |                     Result |
-| ---------------------------- | -------------------------: |
-| Golden examples              |                    **200** |
-| Number of intents            |                     **11** |
-| Majority baseline            |                    **28%** |
-| Rule-based baseline accuracy |                    **38%** |
-| Rule-based Macro F1          |                 **0.4053** |
-| AI classifier accuracy       |          ***76%*** |
-| AI classifier Macro F1       |          ***0.721*** |
-| LLM-judge evaluation         |              **Completed** |
-| Human vs LLM-judge agreement |        ***84% (provisional)*** |
-| Previous misleading result   |                  **99.5%** |
-| Leakage                      | **Identified and removed** |
+| Evaluation Component          |                      Result |
+| ------------------------------ | ---------------------------: |
+| Golden examples                |                     **200** |
+| Number of intents              |                      **11** |
+| Majority baseline              |                     **28%** |
+| Rule-based baseline accuracy   |                     **38%** |
+| Rule-based Macro F1            |                  **0.4053** |
+| AI classifier accuracy         |                     **76%** |
+| AI classifier Macro F1         |                   **0.721** |
+| LLM-judge evaluation           |               **Completed** |
+| Human vs LLM-judge agreement   |         **84% (provisional)** |
+| Previous misleading result     |                   **99.5%** |
+| Leakage                        |  **Identified and removed** |
 
-> **Important:** Only report metrics from the corrected evaluation pipeline in the final project headline. The earlier 99.5% result should be discussed as a leakage-related development result, not as final model performance.
+> [!IMPORTANT]
+> Only report metrics from the corrected evaluation pipeline in the final project headline. The earlier 99.5% result should be discussed as a leakage-related development result, not as final model performance.
