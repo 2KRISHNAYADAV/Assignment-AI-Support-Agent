@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 🍎 Hiver AI Support Agent
 
@@ -643,37 +643,41 @@ Use a calibrated LLM judge plus human spot-checking for:
 
 ## 17. Repository Structure
 
-```
+```text
 hiver-ai-support-agent/
 │
-├── data/
-│   ├── raw/
+├── data/                                 # Datasets
+│   ├── raw/                              # Original Kaggle dataset (500MB, ignored by git)
 │   │   └── customer_support_on_twitter.csv
-│   │
-│   └── processed/
-│       ├── apple_support.csv
-│       ├── development_set.csv
-│       ├── test_set.csv
-│       ├── golden_set_200_reviewed.csv
-│       └── historical_support_pairs_dev.csv
+│   └── processed/                        # Cleaned and split datasets
+│       ├── apple_support.csv             # Filtered AppleSupport tweets
+│       ├── development_set.csv           # 78k training/dev examples
+│       ├── test_set.csv                  # 19k testing examples
+│       ├── golden_set_200_reviewed.csv   # 200 human-verified evaluation examples
+│       └── historical_support_pairs_dev.csv # 62k historical customer-support pairs
 │
-├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   └── Hiver_Evaluation.ipynb
+├── notebooks/                            # Jupyter Notebooks for analysis
+│   ├── 01_data_exploration.ipynb         # Initial EDA and API tests
+│   ├── AppleSupport_Dev_Test_Split.ipynb # Data splitting and pipeline logic
+│   └── Hiver_Evaluation.ipynb            # Core model evaluations and LLM metrics
 │
-├── results/
-│   ├── baseline_rule_predictions.csv
-│   └── golden_predictions.csv
+├── results/                              # Output results from evaluation runs
+│   ├── baseline_rule_predictions.csv     # Rule-based baseline evaluation outputs
+│   ├── golden_predictions.csv            # Final golden set evaluation results
+│   ├── failure_analysis.csv              # Detailed breakdown of misclassifications
+│   └── top5_failure_modes.csv            # Summary of the top 5 model failure modes
 │
-├── reports/
+├── reports/                              # Detailed markdown reports
 │   └── evaluation_report.md
 │
-├── README.md
-└── requirements.txt
+├── src/                                  # Core Python modules
+│   └── agent.py                          # Main Gemini agent logic, classification & retrieval
+│
+├── app.py                                # Streamlit Web UI application
+├── requirements.txt                      # Project Python dependencies
+├── .gitignore                            # Git ignore configuration
+└── README.md                             # Project documentation
 ```
-
-> [!NOTE]
-> The `src/` package is intentionally omitted in this submission version because the current implementation is **notebook-based**.
 
 ---
 
