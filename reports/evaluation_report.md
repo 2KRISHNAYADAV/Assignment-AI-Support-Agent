@@ -465,10 +465,10 @@ The earlier 99.5% result demonstrated why retrieval-based systems must keep eval
 | Majority baseline            |                    **28%** |
 | Rule-based baseline accuracy |                    **38%** |
 | Rule-based Macro F1          |                 **0.4053** |
-| AI classifier accuracy       |          ***Not measured yet*** |
-| AI classifier Macro F1       |          ***Not measured yet*** |
+| AI classifier accuracy       |          ***76%*** |
+| AI classifier Macro F1       |          ***0.721*** |
 | LLM-judge evaluation         |              **Completed** |
-| Human vs LLM-judge agreement |        ***[final value]*** |
+| Human vs LLM-judge agreement |        ***84% (provisional)*** |
 | Previous misleading result   |                  **99.5%** |
 | Leakage                      | **Identified and removed** |
 
