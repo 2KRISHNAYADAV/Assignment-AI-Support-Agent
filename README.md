@@ -813,9 +813,9 @@ Explicit Evaluation
 | Sampling/labeling note                         | ✅                                         |
 | Trivial baseline                               | ✅ Majority = 28%                          |
 | Simple baseline                                | ✅ Rule-based = 38%, Macro F1 = 0.4053     |
-| Automated metrics                              | ⚠️ Partly done                            |
-| LLM-as-judge for reply quality                 | ❌ Not finished                            |
-| Evidence of LLM-judge vs human agreement       | ❌ Not finished                            |
+| Automated metrics                              |  Partly done                            |
+| LLM-as-judge for reply quality                 | done                            |
+| Evidence of LLM-judge vs human agreement       | done                            |
 | Top 5 failure modes with examples + hypotheses | ✅                                         |
 | “What is misleading about my headline number?” | ✅                                         |
 | What to do with one more week                  | ✅                                         |
@@ -823,7 +823,7 @@ Explicit Evaluation
 | README                                         | ✅ Drafted                                 |
 | Clean setup / reproducibility under 15 min     | ⚠️ Needs final test                       |
 | No leaked evaluation numbers                   | ✅ We caught and removed the 99.5% leakage |
-| Submission form                                | ❌ Still needs to be submitted             |
+
 
 ### 💡 Core Design Principle
 
