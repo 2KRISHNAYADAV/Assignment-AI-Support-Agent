@@ -991,7 +991,15 @@ GOOGLE_API_KEY = "your-key-here"
 | Clean setup / reproducibility under 15 minutes | ✅ Done | Verify on a clean environment |
 | No leaked evaluation numbers | ✅ Complete | Identified and removed the 99.5% leakage |
 
-> Repository layout matches [§18 Repository Structure](#18-repository-structure) above — see that section for the authoritative folder tree.
+
+
+
+
+
+
+
+
+
 
 ---
 
